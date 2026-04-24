@@ -1,0 +1,12 @@
+spring:
+  config:
+    import: optional:configserver:http://localhost:8888   # overridden by SPRING_CONFIG_IMPORT env var in Docker
+  application:
+    name: auth-service
+
+server:
+  port: 8083
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka   # overridden by EUREKA_CLIENT_SERVICEURL_DEFAULTZONE env var in Docker

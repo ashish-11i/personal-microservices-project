@@ -1,0 +1,24 @@
+
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/ashish-11i/config-repo
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka   # overridden by EUREKA_CLIENT_SERVICEURL_DEFAULTZONE env var in Docker
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

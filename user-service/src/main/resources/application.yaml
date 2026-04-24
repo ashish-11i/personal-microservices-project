@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: user-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ms_user_db   # overridden by SPRING_DATASOURCE_URL env var in Docker
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  config:
+    import: optional:configserver:http://localhost:8888   # overridden by SPRING_CONFIG_IMPORT env var in Docker
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka   # overridden by EUREKA_CLIENT_SERVICEURL_DEFAULTZONE env var in Docker
+
+server:
+  port: 8081
+
+
+logging:
+  level:
+    root: INFO
+    com.example.userservice: DEBUG
