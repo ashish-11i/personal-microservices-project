@@ -1,0 +1,721 @@
+{
+  "info": {
+    "name": "Personal Microservices - Step-wise API Tests",
+    "description": "Run requests top to bottom. Each step auto-saves IDs (userId, productId, orderId) as collection variables so the next step picks them up automatically.\n\nBase URL: http://localhost:8080 (API Gateway)\n\nStartup order before testing:\n1. PostgreSQL\n2. Eureka Server (port 8761)\n3. Config Server (port 8888)\n4. User Service, Product Service, Auth Service\n5. Order Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",    "value": "http://localhost:8080", "type": "string" },
+    { "key": "userId",     "value": "",                      "type": "string" },
+    { "key": "productId",  "value": "",                      "type": "string" },
+    { "key": "orderId",    "value": "",                      "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "STEP 1 — Health Checks",
+      "item": [
+        {
+          "name": "1.1 Eureka Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:8761", "protocol": "http", "host": ["localhost"], "port": "8761" }
+          }
+        },
+        {
+          "name": "1.2 Config Server Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:8888/actuator/health", "protocol": "http", "host": ["localhost"], "port": "8888", "path": ["actuator","health"] }
+          }
+        },
+        {
+          "name": "1.3 User Service Health (direct)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:8081/users", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["users"] }
+          }
+        },
+        {
+          "name": "1.4 Product Service Health (direct)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:8084/products", "protocol": "http", "host": ["localhost"], "port": "8084", "path": ["products"] }
+          }
+        },
+        {
+          "name": "1.5 Order Service Health (direct)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "http://localhost:8082/orders", "protocol": "http", "host": ["localhost"], "port": "8082", "path": ["orders"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "STEP 2 — User Service",
+      "item": [
+
+        {
+          "name": "2.1 Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', json.id);",
+                  "    console.log('userId saved:', json.id);",
+                  "    pm.test('User registered successfully', () => pm.expect(pm.response.code).to.eql(201));",
+                  "    pm.test('Password NOT in response', () => pm.expect(json).to.not.have.property('password'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ashish\",\n  \"lastName\": \"Sharma\",\n  \"email\": \"ashish@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"9876543210\",\n  \"role\": \"USER\",\n  \"address\": \"123 MG Road\",\n  \"city\": \"Bangalore\",\n  \"state\": \"Karnataka\",\n  \"pincode\": \"560001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/users/register", "host": ["{{baseUrl}}"], "path": ["users","register"] }
+          }
+        },
+
+        {
+          "name": "2.2 Register Admin User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin registered', () => pm.expect(pm.response.code).to.eql(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Admin\",\n  \"lastName\": \"User\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\",\n  \"phone\": \"9000000000\",\n  \"role\": \"ADMIN\",\n  \"address\": \"Admin HQ\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"pincode\": \"400001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/users/register", "host": ["{{baseUrl}}"], "path": ["users","register"] }
+          }
+        },
+
+        {
+          "name": "2.3 Get All Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
+          }
+        },
+
+        {
+          "name": "2.4 Get User by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('ID matches', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('userId'))));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users","{{userId}}"] }
+          }
+        },
+
+        {
+          "name": "2.5 Get User by Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Email matches', () => pm.expect(pm.response.json().email).to.eql('ashish@example.com'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/email?email=ashish@example.com",
+              "host": ["{{baseUrl}}"],
+              "path": ["users","email"],
+              "query": [{ "key": "email", "value": "ashish@example.com" }]
+            }
+          }
+        },
+
+        {
+          "name": "2.6 Update User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('City updated', () => pm.expect(pm.response.json().city).to.eql('Pune'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ashish\",\n  \"lastName\": \"Sharma\",\n  \"phone\": \"9123456789\",\n  \"address\": \"456 FC Road\",\n  \"city\": \"Pune\",\n  \"state\": \"Maharashtra\",\n  \"pincode\": \"411001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users","{{userId}}"] }
+          }
+        },
+
+        {
+          "name": "2.7 Get User Not Found (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404 for unknown user', () => pm.expect(pm.response.code).to.eql(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/99999", "host": ["{{baseUrl}}"], "path": ["users","99999"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "STEP 3 — Product Service",
+      "item": [
+
+        {
+          "name": "3.1 Add Product (Laptop)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('productId', json.id);",
+                  "    console.log('productId saved:', json.id);",
+                  "    pm.test('Product created', () => pm.expect(pm.response.code).to.eql(201));",
+                  "    pm.test('isAvailable is true', () => pm.expect(json.available).to.eql(true));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"MacBook Pro M3\",\n  \"description\": \"Apple MacBook Pro with M3 chip, 16GB RAM, 512GB SSD\",\n  \"price\": 149999.99,\n  \"stock\": 50,\n  \"category\": \"Laptops\",\n  \"brand\": \"Apple\",\n  \"imageUrl\": \"https://example.com/macbook-pro.jpg\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
+          }
+        },
+
+        {
+          "name": "3.2 Add Product (Phone)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"iPhone 15 Pro\",\n  \"description\": \"Apple iPhone 15 Pro, 256GB, Titanium\",\n  \"price\": 134999.00,\n  \"stock\": 100,\n  \"category\": \"Smartphones\",\n  \"brand\": \"Apple\",\n  \"imageUrl\": \"https://example.com/iphone15.jpg\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
+          }
+        },
+
+        {
+          "name": "3.3 Add Product (Headphones)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sony WH-1000XM5\",\n  \"description\": \"Sony Noise Cancelling Wireless Headphones\",\n  \"price\": 29999.00,\n  \"stock\": 5,\n  \"category\": \"Audio\",\n  \"brand\": \"Sony\",\n  \"imageUrl\": \"https://example.com/sony-wh.jpg\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
+          }
+        },
+
+        {
+          "name": "3.4 Get All Products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('Has products', () => pm.expect(pm.response.json().length).to.be.greaterThan(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
+          }
+        },
+
+        {
+          "name": "3.5 Get Product by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('ID matches', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('productId'))));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products","{{productId}}"] }
+          }
+        },
+
+        {
+          "name": "3.6 Update Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Price updated', () => pm.expect(pm.response.json().price).to.eql(139999.99));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"MacBook Pro M3\",\n  \"description\": \"Apple MacBook Pro with M3 chip, 16GB RAM, 512GB SSD — Updated\",\n  \"price\": 139999.99,\n  \"stock\": 50,\n  \"category\": \"Laptops\",\n  \"brand\": \"Apple\",\n  \"imageUrl\": \"https://example.com/macbook-pro-v2.jpg\",\n  \"available\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products","{{productId}}"] }
+          }
+        },
+
+        {
+          "name": "3.7 Get Product Not Found (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404 for unknown product', () => pm.expect(pm.response.code).to.eql(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/products/99999", "host": ["{{baseUrl}}"], "path": ["products","99999"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "STEP 4 — Order Service (Inter-Service Communication)",
+      "item": [
+
+        {
+          "name": "4.1 Place Order ✦ (calls user-service + product-service)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('orderId', json.id);",
+                  "    console.log('orderId saved:', json.id);",
+                  "    pm.test('Order created', () => pm.expect(pm.response.code).to.eql(201));",
+                  "    pm.test('Status is CREATED', () => pm.expect(json.status).to.eql('CREATED'));",
+                  "    pm.test('totalPrice calculated', () => pm.expect(json.totalPrice).to.be.greaterThan(0));",
+                  "    pm.test('Address saved', () => pm.expect(json.address).to.not.be.empty);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders?userId={{userId}}&productId={{productId}}&quantity=2&address=456 FC Road, Pune 411001",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "userId",    "value": "{{userId}}" },
+                { "key": "productId", "value": "{{productId}}" },
+                { "key": "quantity",  "value": "2" },
+                { "key": "address",   "value": "456 FC Road, Pune 411001" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "4.2 Verify Stock Reduced (check product after order)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "var json = pm.response.json();",
+                  "console.log('Stock after order:', json.stock);",
+                  "pm.test('Stock reduced by 2', () => pm.expect(json.stock).to.eql(48));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products","{{productId}}"] }
+          }
+        },
+
+        {
+          "name": "4.3 Place Order with Insufficient Stock (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400 for insufficient stock', () => pm.expect(pm.response.code).to.eql(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders?userId={{userId}}&productId={{productId}}&quantity=9999&address=Test Address",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "userId",    "value": "{{userId}}" },
+                { "key": "productId", "value": "{{productId}}" },
+                { "key": "quantity",  "value": "9999" },
+                { "key": "address",   "value": "Test Address" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "4.4 Place Order with Invalid User (expect error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns error for unknown user', () => pm.expect(pm.response.code).to.be.oneOf([400, 404, 500]));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders?userId=99999&productId={{productId}}&quantity=1&address=Test",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "userId",    "value": "99999" },
+                { "key": "productId", "value": "{{productId}}" },
+                { "key": "quantity",  "value": "1" },
+                { "key": "address",   "value": "Test" }
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "4.5 Get All Orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] }
+          }
+        },
+
+        {
+          "name": "4.6 Get Order by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('ID matches', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('orderId'))));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["orders","{{orderId}}"] }
+          }
+        },
+
+        {
+          "name": "4.7 Get Orders by User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('All orders belong to user', () => {",
+                  "    pm.response.json().forEach(o => pm.expect(o.userId).to.eql(Number(pm.collectionVariables.get('userId'))));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/orders/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["orders","user","{{userId}}"] }
+          }
+        },
+
+        {
+          "name": "4.8 Update Order Status → PAID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Status is PAID', () => pm.expect(pm.response.json().status).to.eql('PAID'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/status?status=PAID",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders","{{orderId}}","status"],
+              "query": [{ "key": "status", "value": "PAID" }]
+            }
+          }
+        },
+
+        {
+          "name": "4.9 Update Order Status → SHIPPED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Status is SHIPPED', () => pm.expect(pm.response.json().status).to.eql('SHIPPED'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/status?status=SHIPPED",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders","{{orderId}}","status"],
+              "query": [{ "key": "status", "value": "SHIPPED" }]
+            }
+          }
+        },
+
+        {
+          "name": "4.10 Update Order Status → DELIVERED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.eql(200));",
+                  "pm.test('Status is DELIVERED', () => pm.expect(pm.response.json().status).to.eql('DELIVERED'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}/status?status=DELIVERED",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders","{{orderId}}","status"],
+              "query": [{ "key": "status", "value": "DELIVERED" }]
+            }
+          }
+        },
+
+        {
+          "name": "4.11 Get Order Not Found (expect 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 404 for unknown order', () => pm.expect(pm.response.code).to.eql(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/orders/99999", "host": ["{{baseUrl}}"], "path": ["orders","99999"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "STEP 5 — Cleanup (optional)",
+      "item": [
+
+        {
+          "name": "5.1 Delete Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Product deleted (204)', () => pm.expect(pm.response.code).to.eql(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products","{{productId}}"] }
+          }
+        },
+
+        {
+          "name": "5.2 Delete User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User deleted (204)', () => pm.expect(pm.response.code).to.eql(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users","{{userId}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}
