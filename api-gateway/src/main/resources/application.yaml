@@ -30,3 +30,6 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka   # overridden by EUREKA_CLIENT_SERVICEURL_DEFAULTZONE env var in Docker
+
+jwt:
+  secret: mysecretkeymysecretkeymysecretkey   # overridden by JWT_SECRET env var in Docker/prod — must match auth-service

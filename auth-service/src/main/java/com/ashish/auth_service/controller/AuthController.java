@@ -1,5 +1,6 @@
 package com.ashish.auth_service.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,26 +18,26 @@ import com.ashish.auth_service.utils.JwtUtil;
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
+    private final JwtUtil jwtUtil;
 
-    public AuthController(AuthenticationManager authenticationManager) {
+    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
         this.authenticationManager = authenticationManager;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequestDto loginRequestDto) {
-        Authentication authenticate = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequestDto.getUsername(), loginRequestDto.getPassword())
-        );
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequestDto loginRequestDto) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginRequestDto.getUsername(),
+                        loginRequestDto.getPassword()));
 
-        if (authenticate.isAuthenticated()) {
-            String role = authenticate.getAuthorities().stream()
-                    .findFirst()
-                    .map(authority -> authority.getAuthority())
-                    .orElse("ROLE_USER");
-            String token = JwtUtil.generateToken(loginRequestDto.getUsername(), role);
-            return new LoginResponse(token);
-        } else {
-            throw new RuntimeException("Authentication failed");
-        }
+        String role = authentication.getAuthorities().stream()
+                .findFirst()
+                .map(a -> a.getAuthority())
+                .orElse("ROLE_USER");
+
+        String token = jwtUtil.generateToken(loginRequestDto.getUsername(), role);
+        return ResponseEntity.ok(new LoginResponse(token));
     }
 }

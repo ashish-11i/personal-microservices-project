@@ -9,6 +9,8 @@ import com.ashish.auth_service.dto.ExternalUserDto;
 @FeignClient(name = "user-service")
 public interface UserClient {
 
-    @GetMapping("/users/email")
+    // Calls the internal endpoint that returns the hashed password.
+    // This route is blocked at the API Gateway — only reachable service-to-service.
+    @GetMapping("/users/internal/email")
     ExternalUserDto getUserByEmail(@RequestParam("email") String email);
 }

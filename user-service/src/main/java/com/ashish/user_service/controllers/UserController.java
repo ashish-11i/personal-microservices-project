@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ashish.user_service.dto.UserResponseDto;
 import com.ashish.user_service.models.User;
+import com.ashish.user_service.repository.UserRepository;
 import com.ashish.user_service.services.UserService;
 
 @RestController
@@ -23,9 +24,11 @@ import com.ashish.user_service.services.UserService;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserRepository userRepository) {
         this.userService = userService;
+        this.userRepository = userRepository;
     }
 
     // POST /users/register — create a new user account
@@ -63,5 +66,17 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // GET /users/internal/email?email=x
+    // INTERNAL USE ONLY — called by auth-service to load user with hashed password for Spring Security.
+    // This route is blocked at the API Gateway so it is never reachable from outside the cluster.
+    @GetMapping("/internal/email")
+    public ResponseEntity<User> getInternalUserByEmail(@RequestParam String email) {
+        return ResponseEntity.ok(
+                userRepository.findByEmail(email)
+                        .orElseThrow(() -> new com.ashish.user_service.exception.ResourceNotFoundException(
+                                "User not found with email: " + email))
+        );
     }
 }
